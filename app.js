@@ -4,6 +4,8 @@ const ejs = require('ejs')
 const mongoose = require('mongoose')
 const encrypt = require('mongoose-encryption')
 require('dotenv').config()
+const bcrypt = require('bcrypt')
+const saltRounds = 10
 
 const app = express()
 
@@ -37,27 +39,31 @@ app.get('/login', (req, res) => {
   res.render('login')
 })
 app.post('/register', (req, res) => {
-  const newUser = new User({
-    email: req.body.username,
-    password: req.body.password,
-  })
-  newUser.save((err) => {
-    if (err) throw err
-    else console.log('user saved')
-    res.render('Secrets')
+  bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+    const newUser = new User({
+      email: req.body.username,
+      password: hash,
+    })
+    newUser.save((err) => {
+      if (err) throw err
+      else console.log('user saved')
+      res.render('Secrets')
+    })
   })
 })
 
 app.post('/login', (req, res) => {
   const username = req.body.username
   const password = req.body.password
-  console.log(typeof username)
 
   User.findOne({ email: username }, (err, result) => {
     if (err) console.log(err)
     else {
       if (result) {
-        if (result.password === password) res.render('Secrets')
+        console.log(result)
+        bcrypt.compare(password, result.password, (err, boolValue) => {
+          if (boolValue) res.render('Secrets')
+        })
       } else res.render('login')
     }
   })
